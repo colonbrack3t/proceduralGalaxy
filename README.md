@@ -8,3 +8,4 @@ I implemented a Lehmer Algorithm to create random numbers that have random resul
 Focus was on light work load for the computer, so things are only generated if theyre needed (e.g. planets are not generated until displayed)
 
 
+![image](https://user-images.githubusercontent.com/26506402/182030852-3427b683-eb55-45ca-9cd8-d8510e7753e5.png)

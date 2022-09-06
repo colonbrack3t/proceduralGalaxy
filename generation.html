@@ -1,0 +1,407 @@
+<body style = "background-color: black;display: flex; align-items: center;justify-content: center;">
+    <div hidden id="images"></div>
+    <canvas id="canvas" width="800" height="700"></canvas>
+<script src="decimal.js"></script>
+<script type="text/javascript">
+    var canv = document.getElementById('canvas')
+    var screen_height = canv.height
+    var screen_width = canv.width
+    var ctx = canv.getContext('2d');
+
+    var galaxyOffsetx = 345767
+    var galaxyOffsety = 78563
+    var time =0
+    let fps = 60
+    var mousex = 0
+    var mousey = 0
+    let loop
+    let clicked = false
+    let clickedStar 
+    var pressedKeys = {};
+    var circle_light_colour = 16777215
+    var circle_light_colour_change = 65793
+    window.onkeyup = function (e) { pressedKeys[e.keyCode] = false; }
+    window.onkeydown = function (e) { pressedKeys[e.keyCode] = true; }
+    const StarColors = {
+        AliceBlue: 'AliceBlue',
+        CornSilk: 'CornSilk',
+        darkred: 'darkred',
+        lightcyan: 'lightcyan',
+        khaki: 'khaki',
+        darkyellow: 'darkgoldenrod',
+        mediumpurple : 'mediumpurple'
+    };
+    const PlanetColors = {
+        red : 'red'
+    }
+    function  PlanetFileNames(num){
+        return 'planets/' + num + '.png'}
+    function DrawPixel(x, y, color) {
+        FillRect(x, y,  1,  1, color)
+    }
+    function DrawRect(x,y,i,j,color, thickness = 1){
+        ctx.strokeStyle = color
+        ctx.lineWidth = thickness
+        ctx.strokeRect(x, y, i, j)
+        ctx.lineWidth = 1
+    }
+    function FillRect(x,y,i,j,color){
+        ctx.fillStyle = color
+        ctx.fillRect(x, y, i,  j)
+    }
+    function WriteCanvas(x,y,color,text,font,textAlign = "start"){
+        ctx.fillStyle = color
+        ctx.textAlign = textAlign
+        ctx.font = font
+        ctx.fillText(text, x,y)
+    }
+    function DrawCircle(x, y, radius, color) {
+        DrawHighlightCircle(x, y, radius, color)
+        ctx.fillStyle = color;
+        ctx.fill()
+    }
+    function DrawHighlightCircle(x, y, radius, color) {
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI << 1 + 1, false);
+
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = color;
+        ctx.stroke();
+
+    }
+    function DrawImage(x,y,ind, radius, src = 'planets') {
+        var img = document.getElementById(src + ind)
+            ctx.drawImage(img, x-radius,y-radius,radius * 2,radius*2);
+        
+}
+    canv.addEventListener('click', event => {
+        let bound = canv.getBoundingClientRect();
+
+        let x = event.clientX - bound.left - canvas.clientLeft;
+        let y = event.clientY - bound.top - canvas.clientTop;
+
+        clickedx = Math.floor(x / 16) + parseInt(galaxyOffsetx)
+        clickedy = Math.floor(y / 16) + parseInt(galaxyOffsety)
+
+        let star = new StarSystem(clickedx, clickedy)
+        if (star.exists){
+            clicked = true
+            clickedStar = new StarSystem(clickedx, clickedy,true)
+            console.log(clickedStar)
+        }
+        else{
+            clicked = false
+            clickedStar = 0
+        }
+        
+        
+    });
+    canv.addEventListener('mousemove', event => {
+        let bound = canv.getBoundingClientRect();
+
+        let x = event.clientX - bound.left - canvas.clientLeft;
+        let y = event.clientY - bound.top - canvas.clientTop;
+
+        mousex = Math.floor(x / 16)
+        mousey = Math.floor(y / 16)
+
+
+
+    });
+    class Planet {
+        distance = 0
+        diameter = 0
+        num = 0
+        color = 'white'
+        temprature = 0
+        foliage = 0
+        minerals = 0
+        water = 0
+        gases = 0
+        population = 0
+        ring = false
+        ringAngle = 0
+        numMoons = 0
+        moons = []
+    }
+    class StarSystem {
+        exists = false
+        diameter = 0
+        color = 'white'
+        planets = []
+        coords = {}
+        img_num= 0
+        #Lehmer = 0n
+        #Lehmer32() {
+            this.#Lehmer += 0xe120fc15n
+            var tmp = 0n
+            tmp = this.#Lehmer * 0x4a39b70dn
+
+            var m1 = tmp ^ (tmp >> 32n)
+            tmp = m1 * 0x12fad5c9n
+            var m2 = (tmp >> 32n) ^ tmp
+
+            return m2
+        }
+
+
+        #randInt(min = 0n, max = 100n) {
+            return (this.#Lehmer32() % (max - min)) + min
+        }
+        #randFloat(min = 0, max = 1) {
+            let dLehmer = BigDecimal.fromBigInt(this.#Lehmer32())
+
+            return (+dLehmer.divide(0x7fffffn) % (max - min)) + min
+        }
+
+        #bigint_max(...args){
+            if (args.length < 1){ throw 'Max of empty list'; }
+            let m = args[0];
+            args.forEach(a=>{if (a > m) {m = a}});
+            return m;
+        }
+
+
+
+        constructor(x, y, generateFullSystem = false) {
+            this.coords['x'] = x
+            this.coords['y'] = y
+            this.#Lehmer = (BigInt(x)) << 32n | (BigInt(y))
+            this.exists = this.#randInt(0n, 20n) == 1n
+            if (!this.exists)
+                return
+
+            this.diameter = this.#randFloat(1, 10) +this.#randFloat(1, 10) +this.#randFloat(1, 10) 
+            this.color = Object.values(StarColors)[this.#randInt(0n, 7n)]
+            this.img_num = this.#randInt(1n,9n)
+            if (!generateFullSystem) return
+            
+
+            let distanceFromStar = this.#randFloat(60, 200)
+            let planetNum = this.#randInt(0n,46n)
+
+            for (let i = 0; i < planetNum; i++){
+                let p = new Planet()
+                p.distance = new BigDecimal(distanceFromStar).add(BigDecimal.fromBigInt(this.#randInt(20n,200n)))
+                p.diameter = this.#randFloat(10, 30)
+                p.color = Object.values(PlanetColors)[this.#randInt(0n, 1n)]
+                p.num = this.#randInt(1n,47n)
+                p.temprature = this.#randFloat(-200,200)
+                p.foliage = this.#randFloat()
+                p.minerals = this.#randFloat()
+                p.water = this.#randFloat()
+                p.gases = this.#randFloat()
+                let sum = 1/(p.foliage + p.water + p.minerals + p.gases)
+                p.foliage *=sum
+                p.water *= sum
+                p.gases *= sum
+                p.minerals *= sum
+                p.population = this.#bigint_max(0n, this.#randInt(-5000000000n, 200000000000n))
+                p.ring = this.#randInt(0n,10n) == 1
+                if (p.ring)
+                    p.ringAngle = this.#randFloat(0,2 * Math.PI)
+                p.numMoons = this.#bigint_max(this.#randInt(-5n,5n),0n)
+                for(let m = 0; m < p.numMoons; m++)
+                    p.moons.push(this.#randFloat(1,5))
+                this.planets.push(p)
+            }
+
+        }
+
+        
+    }
+    function DrawWindow(){
+            ctx.fillStyle = "black";
+            ctx.beginPath();
+            ctx.arc(screen_width/2, screen_height/2, Math.min(screen_width/2,screen_height/2) - 5, 0, 2 * Math.PI);
+            ctx.rect(screen_width, 0, -screen_width, screen_height);
+            ctx.fill();
+            FillRect(5,2,90,24,'black')
+            
+            if(circle_light_colour + circle_light_colour_change < 0 || circle_light_colour + circle_light_colour_change > 16777215){
+                circle_light_colour_change *=-1
+            }
+            else{
+                circle_light_colour += circle_light_colour_change
+            }
+            if(circle_light_colour < 0){
+                circle_light_colour = 65793
+            }
+            DrawHighlightCircle(screen_width>>1,screen_height>>1,Math.min(screen_width,screen_height)>>1,'#'+circle_light_colour.toString(16))
+            
+            DrawHighlightCircle(screen_width>>1,screen_height>>1,(Math.min(screen_width,screen_height)>>1)-2,'#'+circle_light_colour.toString(16))
+            
+            DrawHighlightCircle(screen_width>>1,screen_height>>1,(Math.min(screen_width,screen_height)>>1) -1,'#'+circle_light_colour.toString(16))
+            
+            for (let i = 0; i < 4; i++) {
+                for(let j = 0; j < 8; j++){
+                if(Math.sin(((1 + i + j + i*j ) *time) + (i+j)/10)+0.9 - ((i+j)/10) > 0){
+                        FillRect(screen_width-(12 * i) - 10,screen_height-(12 * j)-10,10,10,'limegreen')
+                }
+                
+                if(Math.sin(((1+ i + i + j  + j + i*j ) *time) + (i*j)/10)+0.9 - ((i+j)/10) > 0){
+                        FillRect(screen_width-(12 * i) - 10,(12 * j)+10,10,10,'limegreen')
+                }
+
+                }
+                
+            }
+         
+            WriteCanvas(10,10,'lime',"x : " +  ((screen_width >> 5) + (Math.trunc(galaxyOffsetx*100)/100)), "bold 10px monospace")
+            WriteCanvas(10,22,'lime',"y : " + ((screen_height>> 5) + (Math.trunc(galaxyOffsety*100)/100)), "bold 10px monospace")
+
+    }
+    window.onload = function () {
+        for(let i = 1; i < 9; i ++){
+            img = document.createElement('img')
+            img.src = 'suns/'+i+'.png'
+            img.id = 'suns' + i
+            document.getElementById('images').appendChild(img)
+        } for(let i = 1; i < 47; i ++){
+            img = document.createElement('img')
+            img.src = 'planets/'+i+'.png'
+            img.id = 'planets'+i
+            document.getElementById('images').appendChild(img)
+        }
+
+        loop = setInterval(() => {
+            let elapsedTime = (1000 / fps) / 1000
+            time += elapsedTime
+            //left
+            if (pressedKeys[37]) {
+                galaxyOffsetx -= 50 * elapsedTime
+                clickedx -= 50 * elapsedTime
+            }
+            //up
+            if (pressedKeys[38]) {
+                galaxyOffsety -= 50 * elapsedTime
+                clickedy -= 50 * elapsedTime
+            }
+            //right
+            if (pressedKeys[39]) {
+                galaxyOffsetx += 50 * elapsedTime
+                clickedx += 50 * elapsedTime
+            }
+            //down
+            if (pressedKeys[40]) {
+                galaxyOffsety += 50 * elapsedTime
+                clickedx += 50 * elapsedTime
+            }
+
+            
+            var grd = ctx.createRadialGradient(canvas.width/2, canvas.height/2, canvas.width/100, canvas.width/2, canvas.height/2, canvas.width);
+            grd.addColorStop(0, "#441177");
+            grd.addColorStop(1, "black");
+
+            // Fill with gradient
+            ctx.fillStyle = grd;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            let sectorsx = screen_width >> 3
+            let sectorsy = screen_height >>> 3
+            for (let x = 0; x < sectorsx; x++) {
+                for (let y = 0; y < sectorsx; y++) {
+                    star = new StarSystem(x + parseInt(galaxyOffsetx), y + parseInt(galaxyOffsety))
+
+                    if (star.exists) {
+
+
+
+
+                        //DrawCircle(8 + (x * 16), 8 + (y * 16), star.diameter >> 1, star.color)
+                        DrawImage(8 + (x * 16), 8 + (y * 16),star.img_num,star.diameter >> 1,'suns')
+                         if (mousex == x && mousey == y) {
+                            DrawHighlightCircle(8 + (x * 16), 8 + (y * 16), (star.diameter >> 1) + 4, 'yellow')
+                        }
+                        
+                    }
+                }
+            }
+
+            
+
+            if(clicked){
+                // highlight selected star
+                let screencorrdx = clickedStar.coords.x - parseInt(galaxyOffsetx)
+                let screencorrdy = clickedStar.coords.y - parseInt(galaxyOffsety)
+                DrawHighlightCircle(8 + (screencorrdx * 16), 8 + (screencorrdy * 16), (clickedStar.diameter >> 1) + 4, 'white')
+                DrawWindow()
+                
+                let windowx = 00
+                let windowy = screen_height/2 - ((580/700) * screen_height)/2 
+                let windowwidth = (250/800) * screen_width
+                let windowheight = (580/700) * screen_height
+                //draw window
+                FillRect(windowx,windowy,windowwidth,windowheight,'#011610')
+                DrawRect(windowx,windowy,windowwidth,windowheight,'limegreen',2)
+                WriteCanvas(windowx + 2,windowy + 10, 'lime', "x : " +  clickedStar.coords.x + " y : " + clickedStar.coords.y, "bold 10px monospace")
+                //draw star
+                let largestRadius = 10 * 15
+                let renderedStarRadius = 10* (clickedStar.diameter/2)
+                let windowmiddlex = windowx + windowwidth/2
+              
+                let maxy = windowy + windowheight
+                //DrawCircle(windowmiddlex, windowy + 10 + largestRadius, renderedStarRadius, clickedStar.color)
+                DrawImage(windowmiddlex,windowy+10+largestRadius,clickedStar.img_num, renderedStarRadius, 'suns')
+                //draw planets
+                let y = windowy + 10 + largestRadius + renderedStarRadius + 10
+                let diameterModifier = 4
+                for(let i = 0; i < clickedStar.planets.length; i++){
+                    
+                    let p = clickedStar.planets[i]
+                    let diameter = diameterModifier*p.diameter
+                    let breathingroom = Math.max(0, 20-diameter)
+                    if (y + diameter + breathingroom> maxy) {
+                        
+                        break}
+                    
+                    let planety = y + diameter/2 + breathingroom
+                    DrawImage(windowmiddlex,planety,p.num,diameter/2,'planets')
+                    /*
+                    //draw moons
+                    let xpos = windowmiddlex - 10 - diameter/2
+                    for(let j = 0; j < p.numMoons; j++){
+                        let m = p.moons[j]
+                        let diamMoon = 2 * m 
+                        xpos -= diamMoon/2
+                        if ((xpos - diamMoon/2) < 0) break
+                        DrawCircle(xpos , planety, diamMoon, 'grey')
+                        xpos -= 20 - (diamMoon/2)
+                    }
+                    /*if(p.ring){
+                        let ringx = ((diameter/2 + 10) * Math.cos(p.ringAngle))
+                        let ringy = ((diameter/2 + 10) * Math.sin(p.ringAngle))
+                        ctx.strokeStyle = "cyan"
+                        ctx.beginPath()
+                        ctx.moveTo(windowmiddlex - ringx,(planety) - ringy)
+                        ctx.lineTo(windowmiddlex + ringx,(planety) + ringy)
+                        ctx.stroke()
+                    }*/
+                    if (pressedKeys[32]){
+                    WriteCanvas(windowmiddlex +diameter/2 + 5 ,planety-15, 'lime', "Life # : " + Number(p.population).toPrecision(3), "bold 8px monospace")
+                    WriteCanvas(windowmiddlex +diameter/2 + 5 ,planety-9, 'lime', "Temp : " + Number(p.temprature).toPrecision(3), "bold    8px monospace")
+                    WriteCanvas(windowmiddlex +diameter/2 + 5 ,planety-3, 'lime', "Water : " + Number(p.water).toPrecision(3) +"%", "bold 8px monospace")
+                    WriteCanvas(windowmiddlex +diameter/2 + 5 ,planety+3, 'lime', "Gas : " + Number(p.temprature).toPrecision(3)+"%", "bold    8px monospace")
+                    WriteCanvas(windowmiddlex +diameter/2 + 5 ,planety+9, 'lime', "Minrls : " + Number(p.population).toPrecision(3)+"%", "bold 8px monospace")
+                    WriteCanvas(windowmiddlex +diameter/2 + 5 ,planety+15, 'lime', "Plants : " + Number(p.population).toPrecision(3)+"%", "bold 8px monospace")}
+                
+                       
+                        WriteCanvas(windowx + 2, windowy + 20, 
+                        'lime', "hold [space] for details", "10px monospace")
+
+                
+                    
+                    
+                    y += 10 + diameter + breathingroom
+                    
+
+                }
+                
+            }else{
+       DrawWindow()
+        }
+
+
+        }, 1000 / fps)
+    }
+</script>
+</body>

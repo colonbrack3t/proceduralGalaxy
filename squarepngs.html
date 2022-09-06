@@ -1,0 +1,58 @@
+
+<div onclick = 'load()'>LOAD</div>
+<div onclick = 'run()'>RUN</div>
+<div id = 'cvs'></div>
+<div hidden id = 'images'></div>
+<script>
+    imgs= []
+    function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+    function loaded_img(img){
+
+        h = img.height
+                w = img.width
+                
+                canv = document.createElement('canvas')
+                document.getElementById('cvs').appendChild(canv)
+                ctx = canv.getContext('2d')
+                if ( h > w ){
+                    canv.height = h
+                    canv.width = h
+                    
+                    ctx.drawImage(img,(h-w)/2,0)
+                }
+                else{
+                    canv.height = w
+                    canv.width = w
+
+                ctx.drawImage(img,0,(w-h)/2)
+                }
+                
+                
+                
+                var image = canv.toDataURL("image/png").replace("image/png", "image/octet-stream");  // here is the most important part because if you dont replace you will get a DOM 18 exception.
+//console.log(image)
+
+window.location = (image)
+
+         
+    }
+function load(){
+    for(let i = 1; i < 9; i ++){
+            var img = new Image();
+                
+            img.src = 'suns/'+i+'.png'
+            imgs.push(img)
+            
+        }
+}
+async function run(){
+    for(let i = 0; i < 8; i ++){
+            await loaded_img(imgs[i])
+            await sleep(100)
+        }
+    
+}
+
+</script>
